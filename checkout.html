@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout - The Curry Crate</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #2e8b57;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .logo {
+      display: block;
+      margin: 0 auto 20px;
+      max-width: 120px;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      margin-bottom: 12px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .item-details {
+      flex-grow: 1;
+    }
+    .quantity-controls {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .quantity-controls button {
+      padding: 4px 8px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      background-color: #ccc;
+      cursor: pointer;
+    }
+    .summary {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+      justify-content: space-between;
+    }
+    .checkout-btn,
+    .clear-btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .checkout-btn {
+      background-color: #ff6f61;
+      color: white;
+    }
+    .clear-btn {
+      background-color: #aaa;
+      color: white;
+    }
+    .checkout-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #2e8b57;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      font-size: 16px;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://i.imgur.com/4YVd9XT.png" alt="The Curry Crate Logo" class="logo" />
+    <h1>Checkout</h1>
+
+    <div id="cart-items" class="cart-items"></div>
+    <div id="summary" class="summary"></div>
+
+    <div class="button-row">
+      <button id="clear-btn" class="clear-btn">Clear Cart</button>
+      <button id="checkout-btn" class="checkout-btn">Proceed to Payment</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    let cartData = [];
+
+    const cartContainer = document.getElementById("cart-items");
+    const summary = document.getElementById("summary");
+    const checkoutBtn = document.getElementById("checkout-btn");
+    const clearBtn = document.getElementById("clear-btn");
+
+    function showToast(message, duration = 3000) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.style.display = "block";
+      toast.style.opacity = "1";
+
+      setTimeout(() => {
+        toast.style.transition = "opacity 0.5s ease";
+        toast.style.opacity = "0";
+        setTimeout(() => {
+          toast.style.display = "none";
+          toast.style.transition = "none";
+        }, 500);
+      }, duration);
+    }
+
+    function loadCart() {
+      cartData = JSON.parse(sessionStorage.getItem("cart") || "[]");
+    }
+
+    function updateStorage() {
+      sessionStorage.setItem("cart", JSON.stringify(cartData));
+    }
+
+    function renderCart() {
+      loadCart();
+
+      if (!cartData.length) {
+        cartContainer.innerHTML = `
+          <p>Your cart is empty.</p>
+          <div style="text-align:center; margin-top: 20px;">
+            <a href="index.html" style="
+              display:inline-block;
+              padding: 10px 20px;
+              background-color: #2e8b57;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: bold;
+            ">Return to Menu</a>
+          </div>
+        `;
+        summary.innerHTML = "";
+        checkoutBtn.disabled = true;
+        clearBtn.disabled = true;
+        return;
+      }
+
+      let html = "<ul>";
+      let subtotal = 0;
+      cartData.forEach((item, index) => {
+        const price = parseFloat(item.price.replace("$", ""));
+        const total = price * item.quantity;
+        subtotal += total;
+        html += `
+          <li>
+            <div class="item-details">
+              ${item.name} — $${price.toFixed(2)} × ${item.quantity} = $${total.toFixed(2)}
+            </div>
+            <div class="quantity-controls">
+              <button onclick="updateQuantity(${index}, -1)">–</button>
+              <button onclick="updateQuantity(${index}, 1)">+</button>
+            </div>
+          </li>
+        `;
+      });
+      html += "</ul>";
+      cartContainer.innerHTML = html;
+
+      const tax = subtotal * 0.08;
+      const finalTotal = subtotal + tax;
+
+      summary.innerHTML = `
+        Subtotal: $${subtotal.toFixed(2)}<br>
+        Tax (8%): $${tax.toFixed(2)}<br>
+        <strong>Total: $${finalTotal.toFixed(2)}</strong>
+      `;
+
+      checkoutBtn.disabled = false;
+      clearBtn.disabled = false;
+    }
+
+    function updateQuantity(index, delta) {
+      cartData[index].quantity += delta;
+      if (cartData[index].quantity <= 0) {
+        cartData.splice(index, 1);
+      }
+      updateStorage();
+      renderCart();
+    }
+
+    checkoutBtn.addEventListener("click", function () {
+      loadCart();
+      if (!cartData.length) {
+        showToast("Your cart is empty. Please add items before checkout.");
+        return;
+      }
+      window.location.href = "payment.html";
+    });
+
+    clearBtn.addEventListener("click", function () {
+      sessionStorage.removeItem("cart");
+      cartData = [];
+      renderCart();
+    });
+
+    renderCart();
+  </script>
+</body>
+</html>

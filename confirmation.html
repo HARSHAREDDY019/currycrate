@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Confirmation - The Curry Crate</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f2f2f2;
+    }
+    .confirmation-container {
+      max-width: 600px;
+      margin: auto;
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      animation: fadeIn 0.8s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h2 {
+      color: #2e8b57;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    ul li {
+      margin-bottom: 6px;
+    }
+    .thank-you {
+      font-size: 18px;
+      font-weight: bold;
+      color: #444;
+    }
+    .button-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 30px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #print-button {
+      background-color: #2e8b57;
+      color: white;
+    }
+    #print-button:hover {
+      background-color: #246b45;
+    }
+    #home-button {
+      background-color: #555;
+      color: white;
+    }
+    #home-button:hover {
+      background-color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="confirmation-container">
+    <h2>Order Confirmed</h2>
+    <p class="thank-you">Thank you for your purchase! Below are your order details:</p>
+
+    <div class="section">
+      <h3>Order Summary</h3>
+      <ul id="order-items"></ul>
+      <p id="order-total"></p>
+      <p id="order-tax"></p>
+      <p id="order-final"></p>
+    </div>
+
+    <div class="section">
+      <h3>Customer Info</h3>
+      <p><strong>Name:</strong> <span id="customer-name"></span></p>
+      <p><strong>Phone:</strong> <span id="customer-phone"></span></p>
+      <p><strong>Email:</strong> <span id="customer-email"></span></p>
+    </div>
+
+    <div class="section">
+      <h3>Payment Info</h3>
+      <p><strong>Order ID:</strong> <span id="order-id"></span></p>
+      <p><strong>Card:</strong> <span id="card-number"></span></p>
+      <p><strong>Expiry:</strong> <span id="card-expiry"></span></p>
+      <p><strong>Paid At:</strong> <span id="transaction-time"></span></p>
+    </div>
+
+    <div class="button-row">
+      <button id="print-button">Print Receipt</button>
+      <button id="home-button">Go to Home</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!sessionStorage.getItem("confirmedOrderData") || !sessionStorage.getItem("orderId")) {
+        alert("Your session has expired. Redirecting to home.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const orderData = JSON.parse(sessionStorage.getItem("confirmedOrderData")) || [];
+      const totalAmount = parseFloat(sessionStorage.getItem("totalAmount") || "0").toFixed(2);
+      const customerName = sessionStorage.getItem("customerName");
+      const customerPhone = sessionStorage.getItem("customerPhone");
+      const customerEmail = sessionStorage.getItem("customerEmail");
+      const orderId = sessionStorage.getItem("orderId");
+      const cardNumber = sessionStorage.getItem("cardNumber");
+      const expiry = sessionStorage.getItem("expiry");
+      const transactionTime = sessionStorage.getItem("transactionTime");
+
+      const itemsList = document.getElementById("order-items");
+      let subtotal = 0;
+      orderData.forEach(item => {
+        const price = parseFloat(item.price.replace("$", ""));
+        const itemTotal = price * item.quantity;
+        subtotal += itemTotal;
+        const li = document.createElement("li");
+        li.textContent = `${item.name} × ${item.quantity} — $${itemTotal.toFixed(2)}`;
+        itemsList.appendChild(li);
+      });
+
+      const tax = (subtotal * 0.08).toFixed(2);
+      const final = (subtotal + parseFloat(tax)).toFixed(2);
+
+      document.getElementById("order-total").textContent = `Subtotal: $${subtotal.toFixed(2)}`;
+      document.getElementById("order-tax").textContent = `Tax (8%): $${tax}`;
+      document.getElementById("order-final").textContent = `Total Paid: $${final}`;
+
+      document.getElementById("customer-name").textContent = customerName || 'N/A';
+      document.getElementById("customer-phone").textContent = customerPhone || 'N/A';
+      document.getElementById("customer-email").textContent = customerEmail || 'N/A';
+
+      document.getElementById("order-id").textContent = orderId || 'N/A';
+      document.getElementById("card-number").textContent = cardNumber ? `**** **** **** ${cardNumber}` : 'N/A';
+      document.getElementById("card-expiry").textContent = expiry || 'N/A';
+      document.getElementById("transaction-time").textContent = transactionTime || 'N/A';
+
+      // Email receipt to customer
+      fetch('/send-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: customerEmail,
+          subject: 'Your Order Receipt - The Curry Crate',
+          text: `Hi ${customerName},\n\nThank you for your order.\nTotal: $${final}\nOrder ID: ${orderId}`
+        })
+      });
+
+      document.getElementById("print-button").addEventListener("click", () => window.print());
+      document.getElementById("home-button").addEventListener("click", () => window.location.href = 'index.html');
+
+      sessionStorage.removeItem("confirmedOrderData");
+    });
+
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+      history.go(1);
+    };
+  </script>
+</body>
+</html>

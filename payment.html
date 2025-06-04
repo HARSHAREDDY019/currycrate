@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Secure Payment - The Curry Crate</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #2e8b57;
+    }
+    .form-row {
+      margin-bottom: 20px;
+    }
+    input, #card-element {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    button {
+      background: #ff6f61;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #card-errors {
+      color: red;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #2e8b57;
+      color: white;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    #spinner {
+      display: none;
+      margin: 10px auto;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #ff6f61;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .total-box {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    .total-box p {
+      margin: 5px 0;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Payment</h1>
+    <form id="payment-form">
+      <div class="form-row">
+        <label for="name">Full Name</label>
+        <input id="name" required />
+      </div>
+      <div class="form-row">
+        <label for="email">Email</label>
+        <input id="email" type="email" required />
+      </div>
+      <div class="form-row">
+        <label for="phone">Phone</label>
+        <input id="phone" type="tel" required />
+      </div>
+      <div class="form-row">
+        <label for="card-element">Card Info</label>
+        <div id="card-element"></div>
+        <div id="card-errors"></div>
+      </div>
+      <div class="total-box" id="total-box">
+        <p>Subtotal: $0.00</p>
+        <p>Tax (8%): $0.00</p>
+        <p><strong>Total: $0.00</strong></p>
+      </div>
+      <div id="spinner"></div>
+      <button type="submit">Pay Now</button>
+    </form>
+  </div>
+  <div id="toast"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const stripe = Stripe('%%STRIPE_KEY%%');
+      const elements = stripe.elements();
+      const card = elements.create('card');
+      card.mount('#card-element');
+
+      const form = document.getElementById('payment-form');
+      const toast = document.getElementById('toast');
+      const spinner = document.getElementById('spinner');
+      const totalBox = document.getElementById('total-box').querySelectorAll('p');
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 4000);
+      }
+
+      const cart = JSON.parse(sessionStorage.getItem('cart') || '[]');
+      if (!cart.length) {
+        alert('Your cart is empty.');
+        window.location.href = 'index.html';
+      }
+
+      const subtotal = cart.reduce((sum, item) => sum + parseFloat(item.price.replace("$", "")) * item.quantity, 0);
+      const tax = +(subtotal * 0.08).toFixed(2);
+      const total = +(subtotal + tax).toFixed(2);
+
+      totalBox[0].textContent = `Subtotal: $${subtotal.toFixed(2)}`;
+      totalBox[1].textContent = `Tax (8%): $${tax.toFixed(2)}`;
+      totalBox[2].innerHTML = `<strong>Total: $${total.toFixed(2)}</strong>`;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        spinner.style.display = 'block';
+
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const phone = document.getElementById('phone').value;
+
+        const { error, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card,
+          billing_details: { name, email, phone }
+        });
+
+        if (error) {
+          document.getElementById('card-errors').textContent = error.message;
+          spinner.style.display = 'none';
+          return;
+        }
+
+        const res = await fetch('/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: total, email })
+        });
+
+        const { clientSecret } = await res.json();
+
+        const result = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: paymentMethod.id
+        });
+
+        if (result.error) {
+          document.getElementById('card-errors').textContent = result.error.message;
+          showToast('Transaction failed');
+        } else {
+          showToast('Payment successful!');
+
+          const order = {
+            customerName: name,
+            customerEmail: email,
+            customerPhone: phone,
+            items: cart,
+            totalAmount: total
+          };
+
+          await fetch('/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
+          });
+
+          // ✅ Clear cart after order saved
+          sessionStorage.removeItem("cart");
+
+          sessionStorage.setItem("confirmedOrderData", JSON.stringify(cart));
+          sessionStorage.setItem("totalAmount", total.toFixed(2));
+          sessionStorage.setItem("customerName", name);
+          sessionStorage.setItem("customerPhone", phone);
+          sessionStorage.setItem("customerEmail", email);
+          sessionStorage.setItem("transactionTime", new Date().toLocaleString());
+
+          setTimeout(() => window.location.href = 'confirmation.html', 2000);
+        }
+
+        spinner.style.display = 'none';
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Receipt - The Curry Crate</title>
+<style>
+  /* Reset and base */
+  body, html {
+    margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333;
+  }
+  .container {
+    max-width: 700px; background: #fff; margin: 40px auto; padding: 30px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: 12px;
+  }
+  .header {
+    text-align: center; padding-bottom: 30px; border-bottom: 1px solid #e0e0e0;
+  }
+  .header h1 {
+    margin-bottom: 8px; color: #2c3e50; font-weight: 700; letter-spacing: 1px;
+  }
+  .header .status {
+    display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 1.2rem; color: #27ae60; font-weight: 600;
+  }
+  .header .status svg {
+    width: 24px; height: 24px; fill: #27ae60;
+  }
+  .order-info {
+    margin-top: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 24px; display: flex; justify-content: space-between; flex-wrap: wrap;
+    gap: 12px;
+  }
+  .order-info div {
+    flex: 1 1 45%;
+    min-width: 250px;
+  }
+  .order-info h3 {
+    margin-bottom: 8px; color: #34495e; border-bottom: 1px solid #bdc3c7; padding-bottom: 6px;
+  }
+  .order-info p {
+    margin: 4px 0;
+    font-size: 0.95rem;
+  }
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 30px;
+  }
+  table thead {
+    background-color: #ff6f61;
+    color: white;
+  }
+  table th, table td {
+    padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee;
+  }
+  table tbody tr:hover {
+    background-color: #f9f9f9;
+  }
+  .total-row {
+    font-weight: 700; font-size: 1.1rem; background: #f0f0f0;
+  }
+  .footer {
+    text-align: center; margin-top: 40px; font-size: 0.9rem; color: #888;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .order-info {
+      flex-direction: column;
+    }
+    .order-info div {
+      min-width: 100%;
+    }
+    table th, table td {
+      padding: 10px 8px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container" role="main" aria-labelledby="receipt-title">
+    <header class="header">
+      <h1 id="receipt-title">Payment Receipt</h1>
+      <div class="status" aria-live="polite" aria-atomic="true">
+        <!-- Checkmark SVG -->
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M9 16.17l-3.88-3.88a1 1 0 10-1.41 1.41l4.59 4.59a1 1 0 001.41 0l10-10a1 1 0 00-1.41-1.41L9 16.17z"/>
+        </svg>
+        Payment Successful
+      </div>
+    </header>
+
+    <section class="order-info" aria-label="Order and customer information">
+      <div>
+        <h3>Order Details</h3>
+        <p><strong>Order Number:</strong> <span id="order-number">#12345678</span></p>
+        <p><strong>Order Date:</strong> <span id="order-date">April 25, 2025</span></p>
+        <p><strong>Total Amount:</strong> <span id="order-total">$99.00</span></p>
+      </div>
+      <div>
+        <h3>Customer Information</h3>
+        <p><strong>Name:</strong> <span id="customer-name">Jane Doe</span></p>
+        <p><strong>Email:</strong> <span id="customer-email">jane.doe@example.com</span></p>
+        <p><strong>Payment Method:</strong> <span id="payment-method">Visa ending in 1234</span></p>
+      </div>
+    </section>
+
+    <section aria-label="Order summary">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody id="order-items">
+          <tr>
+            <td>Chicken Curry</td>
+            <td>2</td>
+            <td>$30.00</td>
+          </tr>
+          <tr>
+            <td>Basmati Rice</td>
+            <td>1</td>
+            <td>$10.00</td>
+          </tr>
+          <tr>
+            <td>Garlic Naan</td>
+            <td>3</td>
+            <td>$15.00</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="2">Total</td>
+            <td>$99.00</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="footer">
+      &copy; 2025 The Curry Crate. All rights reserved.
+    </footer>
+  </div>
+</body>
+</html>
+

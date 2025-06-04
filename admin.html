@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Menu Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    h1 { text-align: center; }
+    .toast {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: #4caf50;
+      color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      display: none;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    input, button { padding: 5px; }
+    .controls { margin-top: 1rem; text-align: center; }
+  </style>
+</head>
+<body>
+
+<h1>Admin Menu Manager</h1>
+<div class="controls">
+  <button onclick="logout()">Logout</button>
+</div>
+<table id="menu-table">
+  <thead>
+    <tr>
+      <th>Name</th><th>Description</th><th>Price</th><th>Image</th><th>Category</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="menu-body"></tbody>
+</table>
+<div class="controls">
+  <h3>Add New Item</h3>
+  <input id="new-name" placeholder="Name">
+  <input id="new-desc" placeholder="Description">
+  <input id="new-img" placeholder="Image URL">
+  <input id="new-price" placeholder="Price">
+  <input id="new-cat" placeholder="Category">
+  <button onclick="addItem()">Add Item</button>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+  const token = localStorage.getItem("adminToken");
+  if (!token) {
+    alert("Not logged in as admin");
+    window.location.href = "/admin-login.html";
+  }
+
+  async function fetchMenu() {
+    try {
+      const res = await fetch("/api/menu", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch menu items");
+      const items = await res.json();
+      const tbody = document.getElementById("menu-body");
+      tbody.innerHTML = "";
+      items.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input value="${item.name}" onchange="editItem('${item._id}', 'name', this.value)"></td>
+          <td><input value="${item.description}" onchange="editItem('${item._id}', 'description', this.value)"></td>
+          <td><input value="${item.price}" onchange="editItem('${item._id}', 'price', this.value)"></td>
+          <td><input value="${item.image}" onchange="editItem('${item._id}', 'image', this.value)"></td>
+          <td><input value="${item.category}" onchange="editItem('${item._id}', 'category', this.value)"></td>
+          <td><button onclick="deleteItem('${item._id}')">Delete</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (error) {
+      showToast("Error loading menu items");
+      console.error(error);
+    }
+  }
+
+  async function editItem(id, field, value) {
+    try {
+      const res = await fetch(`/api/menu/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ [field]: value })
+      });
+      if (res.ok) showToast("Item updated");
+      else throw new Error("Update failed");
+    } catch (error) {
+      showToast("Update failed");
+    }
+  }
+
+  async function addItem() {
+    const name = document.getElementById("new-name").value.trim();
+    const description = document.getElementById("new-desc").value.trim();
+    const price = document.getElementById("new-price").value.trim();
+    const image = document.getElementById("new-img").value.trim();
+    const category = document.getElementById("new-cat").value.trim();
+
+    if (!name || !description || !price || !image || !category) {
+      showToast("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/menu", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, description, price, image, category })
+      });
+
+      if (res.ok) {
+        showToast("Item added");
+        document.getElementById("new-name").value = "";
+        document.getElementById("new-desc").value = "";
+        document.getElementById("new-price").value = "";
+        document.getElementById("new-img").value = "";
+        document.getElementById("new-cat").value = "";
+        fetchMenu();
+      } else {
+        const errorText = await res.text();
+        console.error("Add failed:", errorText);
+        showToast("Failed to add item");
+      }
+    } catch (error) {
+      showToast("Add failed");
+      console.error(error);
+    }
+  }
+
+  async function deleteItem(id) {
+    try {
+      const res = await fetch(`/api/menu/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast("Item deleted");
+        fetchMenu();
+      } else {
+        showToast("Delete failed");
+      }
+    } catch (error) {
+      showToast("Delete failed");
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("adminToken");
+    window.location.href = "/admin-login.html";
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.style.display = "block";
+    setTimeout(() => toast.style.display = "none", 2000);
+  }
+
+  fetchMenu();
+</script>
+
+</body>
+</html>

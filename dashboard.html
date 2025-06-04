@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Curry Crate</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .navbar {
+      background-color: #2e8b57;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .navbar button {
+      background: #dc3545;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      background-color: #fff;
+      padding: 30px;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #2e8b57;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: space-between;
+    }
+    .controls input,
+    .controls select,
+    .controls button {
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .controls button {
+      background-color: #2e8b57;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    button.update {
+      background-color: #007bff;
+      color: white;
+      margin-top: 5px;
+    }
+    button.delete {
+      background-color: #dc3545;
+      color: white;
+    }
+    button.accept {
+      background-color: #28a745;
+      color: white;
+      margin-top: 5px;
+    }
+    #statusChart {
+      max-width: 400px;
+      margin: 20px auto;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #2e8b57;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 5px;
+      z-index: 9999;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div><strong>Admin Dashboard</strong></div>
+    <button id="logout-btn">Logout</button>
+  </div>
+  <div class="container">
+    <h1>Manage Orders</h1>
+    <div class="controls">
+      <input type="text" id="search-box" placeholder="Search by customer..." />
+      <select id="status-filter">
+        <option value="all">All</option>
+        <option value="Pending">Pending</option>
+        <option value="Shipped">Shipped</option>
+        <option value="Delivered">Delivered</option>
+      </select>
+      <input type="date" id="start-date" />
+      <input type="date" id="end-date" />
+      <button id="export-btn">Export CSV</button>
+    </div>
+
+    <canvas id="statusChart"></canvas>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Total</th>
+          <th>Items</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="order-table-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const socket = io();
+    socket.on('orderUpdated', () => {
+      fetchOrders();
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.removeItem("adminToken");
+      window.location.href = "admin-login.html";
+    });
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) window.location.href = 'admin.html';
+
+    let orders = [];
+    let chart;
+
+    async function fetchOrders() {
+      try {
+        const res = await fetch('/admin/orders', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Auth or server error");
+        orders = await res.json();
+        renderOrders();
+        renderChart();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function renderOrders() {
+      const tbody = document.getElementById('order-table-body');
+      const query = document.getElementById('search-box').value.toLowerCase();
+      const filter = document.getElementById('status-filter').value;
+      const start = new Date(document.getElementById('start-date').value || '2000-01-01');
+      const end = new Date(document.getElementById('end-date').value || '3000-01-01');
+
+      const filtered = orders.filter(order => {
+        const matchName = order.customerName.toLowerCase().includes(query);
+        const matchStatus = filter === 'all' || order.status === filter;
+        const created = new Date(order.createdAt);
+        const matchDate = created >= start && created <= end;
+        return matchName && matchStatus && matchDate;
+      });
+
+      tbody.innerHTML = '';
+      filtered.forEach(order => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${order.customerName}</td>
+          <td>${order.customerEmail}</td>
+          <td>${order.customerPhone}</td>
+          <td>$${order.totalAmount.toFixed(2)}</td>
+          <td>${order.items.map(i => `${i.name} × ${i.quantity}`).join('<br>')}</td>
+          <td>
+            <select id="status-${order._id}">
+              <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>Pending</option>
+              <option value="Shipped" ${order.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+              <option value="Delivered" ${order.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+            </select>
+          </td>
+          <td>
+            <button class="accept" data-id="${order._id}" data-status="Accepted">Accept</button>
+            <button class="update" data-id="${order._id}">Update</button>
+            <button class="delete" data-id="${order._id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      document.querySelectorAll('.update').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const status = document.getElementById(`status-${id}`).value;
+          await updateStatus(id, status);
+        });
+      });
+
+      document.querySelectorAll('.accept').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          await updateStatus(id, 'Accepted');
+        });
+      });
+
+      document.querySelectorAll('.delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          if (confirm('Delete this order?')) await deleteOrder(id);
+        });
+      });
+    }
+
+    async function updateStatus(orderId, newStatus) {
+      try {
+        const res = await fetch(`/admin/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        const result = await res.json();
+        if (!res.ok) throw result;
+        showToast(result.message);
+        await fetchOrders();
+      } catch (err) {
+        showToast(err.message || 'Failed to update status.');
+      }
+    }
+
+    async function deleteOrder(orderId) {
+      try {
+        await fetch(`/admin/orders/${orderId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast('Order deleted');
+        fetchOrders();
+      } catch {
+        showToast('Failed to delete order.');
+      }
+    }
+
+    function renderChart() {
+      const statusCounts = orders.reduce((acc, o) => {
+        acc[o.status] = (acc[o.status] || 0) + 1;
+        return acc;
+      }, {});
+
+      const ctx = document.getElementById('statusChart').getContext('2d');
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(statusCounts),
+          datasets: [{
+            label: 'Order Statuses',
+            data: Object.values(statusCounts),
+            backgroundColor: ['#ffc107', '#007bff', '#28a745', '#6c757d']
+          }]
+        }
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    document.getElementById('search-box').addEventListener('input', renderOrders);
+    document.getElementById('status-filter').addEventListener('change', renderOrders);
+    document.getElementById('start-date').addEventListener('change', renderOrders);
+    document.getElementById('end-date').addEventListener('change', renderOrders);
+
+    document.getElementById('export-btn').addEventListener('click', () => {
+      const rows = [['Customer', 'Email', 'Phone', 'Total', 'Items', 'Status']];
+      orders.forEach(o => {
+        rows.push([
+          o.customerName,
+          o.customerEmail,
+          o.customerPhone,
+          `$${o.totalAmount.toFixed(2)}`,
+          o.items.map(i => `${i.name} x${i.quantity}`).join(', '),
+          o.status
+        ]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'orders.csv';
+      link.click();
+    });
+
+    fetchOrders();
+  </script>
+</body>
+</html>

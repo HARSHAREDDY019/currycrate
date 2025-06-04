@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Order Confirmation - The Curry Crate</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <section class="highlight">
+    <h2>Payment Confirmation</h2>
+    <p><strong>Order ID:</strong> <span id="order-id"></span></p>
+    <p><strong>Transaction Time:</strong> <span id="transaction-time"></span></p>
+    
+    <h3>Payment Details</h3>
+    <p><strong>Name on Card:</strong> <span id="card-name"></span></p>
+    <p><strong>Card Number:</strong> <span id="card-number"></span></p>
+    <p><strong>Expiry Date:</strong> <span id="expiry"></span></p>
+    
+    <p>Thank you for your order! A receipt has been generated.</p>
+    <a href="index.html" class="button">Return to Home</a>
+  </section>
+
+  <script>
+    // Retrieve payment details from sessionStorage
+    document.getElementById("order-id").innerText = sessionStorage.getItem("orderId");
+    document.getElementById("transaction-time").innerText = sessionStorage.getItem("transactionTime");
+    document.getElementById("card-name").innerText = sessionStorage.getItem("cardName");
+    document.getElementById("card-number").innerText = sessionStorage.getItem("cardNumber");
+    document.getElementById("expiry").innerText = sessionStorage.getItem("expiry");
+
+    // Clear sessionStorage after displaying receipt
+    sessionStorage.removeItem("orderId");
+    sessionStorage.removeItem("transactionTime");
+    sessionStorage.removeItem("cardName");
+    sessionStorage.removeItem("cardNumber");
+    sessionStorage.removeItem("expiry");
+  </script>
+</body>
+</html>

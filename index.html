@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Curry Crate</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2&display=swap" rel="stylesheet">
+</head>
+<body>
+<header>
+  <h1>The Curry Crate</h1>
+  <nav>
+    <ul>
+      <li><a href="#home">Home</a></li>
+      <li><a href="#menu">Menu</a></li>
+      <li><a href="#about">About Us</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li><a href="#menu" class="button order" id="orderNow">Order Now</a></li>
+      <li><a href="#" class="button order" id="checkoutBtn">Checkout</a></li>
+    </ul>
+  </nav>
+</header>
+
+<section id="home" class="hero">
+  <div class="overlay"></div>
+  <div class="hero-text">
+    <h2>Home-Cooked Indian Goodness</h2>
+    <p>Fresh, flavorful, and made with love – just like mom’s kitchen.</p>
+    <a href="#menu" class="button">Explore Our Menu</a>
+  </div>
+</section>
+
+<section id="menu" class="highlight">
+  <h2>Popular Dishes</h2>
+  <div class="filter-buttons">
+    <button type="button" data-category="All" class="active">All</button>
+    <button type="button" data-category="Veg">Veg</button>
+    <button type="button" data-category="Non-Veg">Non-Veg</button>
+  </div>
+  <input type="text" id="search-box" placeholder="Search dishes..." />
+  <div id="menu-container" class="menu-items"></div>
+</section>
+
+<section id="cart" class="highlight">
+  <h2>Your Cart</h2>
+  <div id="cart-items"></div>
+  <p id="total-price"><strong>Total: $0.00</strong></p>
+  <button class="button" id="clearCartBtn">Clear Cart</button>
+  <button class="button order" id="checkoutBtnBottom">Checkout</button>
+</section>
+
+<div id="sticky-cart" class="sticky-cart" style="display: none">
+  <p id="cart-summary">Cart: 0 items - $0.00</p>
+  <button id="stickyCheckout">Go to Checkout</button>
+</div>
+
+<section id="delivery" class="highlight delivery-section">
+  <h2>Delivery & Takeout Made Easy</h2>
+  <p>Craving home-style Indian food but don’t want to cook? We’ve got you covered!</p>
+  <ul>
+    <li>📦 Fast and fresh delivery right to your door</li>
+    <li>💼 Easy takeout for busy days</li>
+    <li>🔥 Special offers available for first-time delivery orders</li>
+  </ul>
+  <a href="#menu" class="button">Order Now</a>
+</section>
+
+<section id="about">
+  <h2>About Us</h2>
+  <p>The Curry Crate was born from the idea of bringing authentic home-cooked Indian meals to everyone. Our dishes are prepared fresh daily using traditional recipes and love.</p>
+</section>
+
+<section id="contact">
+  <p>Email: hello@thecurrycrate.com</p>
+  <p>Phone: +1 (123) 456-7890</p>
+</section>
+
+<footer>
+  <p>&copy; 2025 The Curry Crate. All rights reserved.</p>
+</footer>
+
+<script>
+  let menu = [];
+  let selectedCategory = "All";
+  const container = document.getElementById("menu-container");
+  const searchInput = document.getElementById("search-box");
+  let cart = JSON.parse(sessionStorage.getItem("cart")) || [];
+
+  async function fetchMenu() {
+    try {
+      const res = await fetch('/pub');
+      menu = await res.json();
+      renderMenu();
+    } catch (e) {
+      console.error("Failed to load menu", e);
+    }
+  }
+
+  function renderMenu() {
+    container.innerHTML = "";
+    const query = searchInput.value.toLowerCase();
+    const filtered = menu.filter(item => {
+      const matchCategory = selectedCategory === "All" || item.category?.toLowerCase() === selectedCategory.toLowerCase();
+      const matchSearch = item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query);
+      return matchCategory && matchSearch;
+    });
+
+    filtered.forEach((item, index) => {
+      const div = document.createElement("div");
+      div.className = "item fade-in";
+      div.innerHTML = `
+        <img src="${item.image}" alt="${item.name}" />
+        <h3>${item.name}</h3>
+        <p>${item.description}</p>
+        <p><strong>${item.price}</strong></p>
+        <button class="add-to-cart" data-index="${menu.indexOf(item)}">Add to Cart</button>
+      `;
+      container.appendChild(div);
+    });
+
+    document.querySelectorAll(".add-to-cart").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = btn.getAttribute("data-index");
+        addToCart(menu[idx]);
+      });
+    });
+  }
+
+  function setCategory(category) {
+    selectedCategory = category;
+    document.querySelectorAll(".filter-buttons button").forEach(btn => btn.classList.remove("active"));
+    const activeBtn = Array.from(document.querySelectorAll(".filter-buttons button"))
+      .find(b => b.getAttribute("data-category") === category);
+    if (activeBtn) activeBtn.classList.add("active");
+    renderMenu();
+  }
+
+  function addToCart(item) {
+    const existing = cart.find(cartItem => cartItem.name === item.name);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      item.quantity = 1;
+      cart.push(item);
+    }
+    sessionStorage.setItem("cart", JSON.stringify(cart));
+    renderCart();
+  }
+
+  function renderCart() {
+    const cartItems = document.getElementById("cart-items");
+    const totalPrice = document.getElementById("total-price");
+    const stickyCart = document.getElementById("sticky-cart");
+    const cartSummary = document.getElementById("cart-summary");
+
+    cartItems.innerHTML = "";
+    let total = 0;
+    let count = 0;
+
+    if (cart.length === 0) {
+      cartItems.innerHTML = '<p class="empty-cart">Your cart is empty.</p>';
+      totalPrice.innerHTML = `<strong>Total: $0.00</strong>`;
+      stickyCart.style.display = 'none';
+    } else {
+      cart.forEach((item, index) => {
+        const itemTotal = parseFloat(item.price.replace("$", "")) * item.quantity;
+        total += itemTotal;
+        count += item.quantity;
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <p>
+            ${item.name} - ${item.price} × ${item.quantity} = $${itemTotal.toFixed(2)}
+            <button data-index="${index}" class="decrease">−</button>
+            <button data-index="${index}" class="increase">+</button>
+            <button data-index="${index}" class="remove">Remove</button>
+          </p>
+        `;
+        cartItems.appendChild(div);
+      });
+      totalPrice.innerHTML = `<strong>Total: $${total.toFixed(2)}</strong>`;
+      stickyCart.style.display = 'flex';
+      cartSummary.textContent = `Cart: ${count} items - $${total.toFixed(2)}`;
+    }
+
+    document.querySelectorAll(".decrease").forEach(btn => btn.addEventListener("click", () => {
+      const i = btn.getAttribute("data-index");
+      if (cart[i].quantity > 1) cart[i].quantity -= 1; else cart.splice(i, 1);
+      sessionStorage.setItem("cart", JSON.stringify(cart));
+      renderCart();
+    }));
+
+    document.querySelectorAll(".increase").forEach(btn => btn.addEventListener("click", () => {
+      const i = btn.getAttribute("data-index");
+      cart[i].quantity += 1;
+      sessionStorage.setItem("cart", JSON.stringify(cart));
+      renderCart();
+    }));
+
+    document.querySelectorAll(".remove").forEach(btn => btn.addEventListener("click", () => {
+      const i = btn.getAttribute("data-index");
+      cart.splice(i, 1);
+      sessionStorage.setItem("cart", JSON.stringify(cart));
+      renderCart();
+    }));
+  }
+
+  function clearCart() {
+    sessionStorage.removeItem("cart");
+    cart = [];
+    renderCart();
+  }
+
+  function checkout() {
+    if (cart.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+    const total = cart.reduce((sum, item) => sum + parseFloat(item.price.replace("$", "")) * item.quantity, 0);
+    sessionStorage.setItem("orderData", JSON.stringify(cart));
+    sessionStorage.setItem("totalAmount", total.toFixed(2));
+    window.location.href = "payment.html";
+  }
+
+  document.querySelectorAll(".filter-buttons button").forEach(btn => {
+    btn.addEventListener("click", () => setCategory(btn.getAttribute("data-category")));
+  });
+
+  document.getElementById("clearCartBtn").addEventListener("click", clearCart);
+  document.getElementById("checkoutBtn").addEventListener("click", checkout);
+  document.getElementById("checkoutBtnBottom").addEventListener("click", checkout);
+  document.getElementById("stickyCheckout").addEventListener("click", checkout);
+
+  searchInput.addEventListener("input", renderMenu);
+  window.onload = () => {
+    fetchMenu();
+    renderCart();
+  };
+</script>
+</body>
+</html>

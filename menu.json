@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Butter Chicken",
+    "image": "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg",
+    "description": "Creamy tomato-based chicken curry",
+    "price": "$12.99",
+    "category": "Non-Veg"
+  },
+  {
+    "name": "Paneer Tikka",
+    "image": "https://images.pexels.com/photos/1111316/pexels-photo-1111316.jpeg",
+    "description": "Grilled paneer with Indian spices",
+    "price": "$10.99",
+    "category": "Veg"
+  },
+  {
+    "name": "Veg Biryani",
+    "image": "https://images.pexels.com/photos/1070890/pexels-photo-1070890.jpeg",
+    "description": "Spicy rice dish with mixed vegetables",
+    "price": "$11.49",
+    "category": "Veg"
+  },
+  {
+    "name": "Chole Bhature",
+    "image": "https://images.pexels.com/photos/5945750/pexels-photo-5945750.jpeg",
+    "description": "Spiced chickpeas with fluffy fried bread",
+    "price": "$9.99",
+    "category": "Veg"
+  },
+  {
+    "name": "Masala Dosa",
+    "image": "https://images.pexels.com/photos/1143754/pexels-photo-1143754.jpeg",
+    "description": "South Indian rice crepe with potato filling",
+    "price": "$8.99",
+    "category": "Veg"
+  }
+]
