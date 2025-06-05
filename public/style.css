@@ -13,24 +13,24 @@ header {
   background-color: #ff6f61;
   color: white;
   padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 1.8em;
+.header-container {
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 nav ul {
   list-style: none;
   display: flex;
-  gap: 15px;
+  gap: 20px;
   padding: 0;
   margin: 0;
 }
@@ -39,11 +39,14 @@ nav ul li a {
   color: white;
   text-decoration: none;
   font-weight: bold;
-  transition: color 0.3s;
+  padding: 8px 14px;
+  border-radius: 6px;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 nav ul li a:hover {
-  color: #222;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 /* Hero section */
@@ -58,9 +61,27 @@ nav ul li a:hover {
   animation: fadeIn 1.5s ease-in-out;
 }
 
-@keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(30px); }
-  100% { opacity: 1; transform: translateY(0); }
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 20px;
+  background-color: #323232;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  display: none;
+  z-index: 9999;
+  font-weight: bold;
+  font-family: 'Baloo 2', cursive;
+  animation: fadeInOut 3s ease;
+}
+
+@keyframes fadeInOut {
+  0%   { opacity: 0; transform: translateY(20px); }
+  10%  { opacity: 1; transform: translateY(0); }
+  90%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(20px); }
 }
 
 .overlay {
@@ -149,7 +170,7 @@ nav ul li a:hover {
 .item {
   background-color: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   padding: 16px;
   text-align: center;
   animation: fadeInUp 0.6s ease forwards;
@@ -157,6 +178,12 @@ nav ul li a:hover {
   opacity: 0;
   max-width: 400px;
   margin: auto;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.item:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .item img {
@@ -171,6 +198,16 @@ nav ul li a:hover {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+.cart-update {
+  animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
 }
 
 /* Cart */

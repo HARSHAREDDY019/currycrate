@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Cart - The Curry Crate</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .cart-container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .cart-item {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .cart-item h3 {
+      margin: 0 0 10px;
+    }
+
+    .cart-item p {
+      margin: 5px 0;
+    }
+
+    .cart-actions button {
+      background-color: #eee;
+      border: none;
+      border-radius: 6px;
+      margin: 5px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .cart-actions button:hover {
+      background-color: #ddd;
+    }
+
+    .total-section {
+      margin-top: 30px;
+      text-align: right;
+    }
+
+    .total-section strong {
+      font-size: 1.3em;
+    }
+
+    .cart-buttons {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .button {
+      font-size: 1em;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <h1><a href="index.html" style="color:white; text-decoration:none">← The Curry Crate</a></h1>
+    </div>
+  </header>
+
+  <section class="highlight cart-container">
+    <h2>Your Cart</h2>
+    <div id="cart-items"></div>
+    <div class="total-section">
+      <p id="total-price"><strong>Total: $0.00</strong></p>
+      <div class="cart-buttons">
+        <button class="button" id="clearCartBtn">Clear Cart</button>
+        <button class="button order" id="checkoutBtn">Checkout</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  let cart = JSON.parse(sessionStorage.getItem("cart")) || [];
+
+  function renderCart() {
+    const cartItems = document.getElementById("cart-items");
+    const totalPrice = document.getElementById("total-price");
+
+    cartItems.innerHTML = "";
+    let total = 0;
+
+    if (cart.length === 0) {
+      cartItems.innerHTML = '<p>Your cart is empty.</p>';
+      totalPrice.textContent = "Total: $0.00";
+      return;
+    }
+
+    cart.forEach((item, i) => {
+      const itemTotal = parseFloat(item.price.replace("$", "")) * item.quantity;
+      total += itemTotal;
+
+      const div = document.createElement("div");
+      div.className = "cart-item";
+      div.innerHTML = `
+        <h3>${item.name}</h3>
+        <p>${item.price} × ${item.quantity} = $${itemTotal.toFixed(2)}</p>
+        <div class="cart-actions">
+          <button class="decrease" data-index="${i}">−</button>
+          <button class="increase" data-index="${i}">+</button>
+          <button class="remove" data-index="${i}">Remove</button>
+        </div>
+      `;
+      cartItems.appendChild(div);
+    });
+
+    totalPrice.textContent = `Total: $${total.toFixed(2)}`;
+
+    document.querySelectorAll(".decrease").forEach(btn =>
+      btn.addEventListener("click", () => updateQuantity(btn.dataset.index, -1))
+    );
+    document.querySelectorAll(".increase").forEach(btn =>
+      btn.addEventListener("click", () => updateQuantity(btn.dataset.index, 1))
+    );
+    document.querySelectorAll(".remove").forEach(btn =>
+      btn.addEventListener("click", () => removeItem(btn.dataset.index))
+    );
+  }
+
+  function updateQuantity(index, change) {
+    index = parseInt(index);
+    cart[index].quantity += change;
+    if (cart[index].quantity < 1) {
+      cart.splice(index, 1);
+    }
+    sessionStorage.setItem("cart", JSON.stringify(cart));
+    renderCart();
+  }
+
+  function removeItem(index) {
+    cart.splice(index, 1);
+    sessionStorage.setItem("cart", JSON.stringify(cart));
+    renderCart();
+  }
+
+  document.getElementById("clearCartBtn").addEventListener("click", () => {
+    sessionStorage.removeItem("cart");
+    cart = [];
+    renderCart();
+  });
+
+  document.getElementById("checkoutBtn").addEventListener("click", () => {
+    if (cart.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+    const total = cart.reduce((sum, item) => sum + parseFloat(item.price.replace("$", "")) * item.quantity, 0);
+    sessionStorage.setItem("orderData", JSON.stringify(cart));
+    sessionStorage.setItem("totalAmount", total.toFixed(2));
+    window.location.href = "payment.html";
+  });
+
+  window.onload = renderCart;
+</script>

@@ -8,18 +8,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2&display=swap" rel="stylesheet">
 </head>
 <body>
-<header>
-  <h1>The Curry Crate</h1>
-  <nav>
-    <ul>
-      <li><a href="#home">Home</a></li>
-      <li><a href="#menu">Menu</a></li>
-      <li><a href="#about">About Us</a></li>
-      <li><a href="#contact">Contact</a></li>
-      <li><a href="#menu" class="button order" id="orderNow">Order Now</a></li>
-      <li><a href="#" class="button order" id="checkoutBtn">Checkout</a></li>
-    </ul>
-  </nav>
+<header class="site-header">
+  <div class="header-container">
+    <h1>The Curry Crate</h1>
+    <nav>
+      <ul class="nav-list">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#menu">Menu</a></li>
+        <li><a href="#about">About Us</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="cart.html" class="button order">🛒 Cart</a></li>
+      </ul>
+    </nav>
+  </div>
 </header>
 
 <section id="home" class="hero">
@@ -42,17 +43,9 @@
   <div id="menu-container" class="menu-items"></div>
 </section>
 
-<section id="cart" class="highlight">
-  <h2>Your Cart</h2>
-  <div id="cart-items"></div>
-  <p id="total-price"><strong>Total: $0.00</strong></p>
-  <button class="button" id="clearCartBtn">Clear Cart</button>
-  <button class="button order" id="checkoutBtnBottom">Checkout</button>
-</section>
-
 <div id="sticky-cart" class="sticky-cart" style="display: none">
   <p id="cart-summary">Cart: 0 items - $0.00</p>
-  <button id="stickyCheckout">Go to Checkout</button>
+  <button id="goToCartBtn">Go to Cart</button>
 </div>
 
 <section id="delivery" class="highlight delivery-section">
@@ -80,6 +73,9 @@
   <p>&copy; 2025 The Curry Crate. All rights reserved.</p>
 </footer>
 
+<!-- Toast Message Container -->
+<div id="toast" class="toast"></div>
+
 <script>
   let menu = [];
   let selectedCategory = "All";
@@ -95,6 +91,13 @@
     } catch (e) {
       console.error("Failed to load menu", e);
     }
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 3000);
   }
 
   function renderMenu() {
@@ -123,6 +126,7 @@
       btn.addEventListener("click", () => {
         const idx = btn.getAttribute("data-index");
         addToCart(menu[idx]);
+        showToast("Item added to cart");
       });
     });
   }
@@ -149,93 +153,61 @@
   }
 
   function renderCart() {
-    const cartItems = document.getElementById("cart-items");
-    const totalPrice = document.getElementById("total-price");
     const stickyCart = document.getElementById("sticky-cart");
     const cartSummary = document.getElementById("cart-summary");
 
-    cartItems.innerHTML = "";
     let total = 0;
     let count = 0;
 
     if (cart.length === 0) {
-      cartItems.innerHTML = '<p class="empty-cart">Your cart is empty.</p>';
-      totalPrice.innerHTML = `<strong>Total: $0.00</strong>`;
       stickyCart.style.display = 'none';
     } else {
-      cart.forEach((item, index) => {
-        const itemTotal = parseFloat(item.price.replace("$", "")) * item.quantity;
-        total += itemTotal;
+      cart.forEach(item => {
+        total += parseFloat(item.price.replace("$", "")) * item.quantity;
         count += item.quantity;
-        const div = document.createElement("div");
-        div.innerHTML = `
-          <p>
-            ${item.name} - ${item.price} × ${item.quantity} = $${itemTotal.toFixed(2)}
-            <button data-index="${index}" class="decrease">−</button>
-            <button data-index="${index}" class="increase">+</button>
-            <button data-index="${index}" class="remove">Remove</button>
-          </p>
-        `;
-        cartItems.appendChild(div);
       });
-      totalPrice.innerHTML = `<strong>Total: $${total.toFixed(2)}</strong>`;
       stickyCart.style.display = 'flex';
       cartSummary.textContent = `Cart: ${count} items - $${total.toFixed(2)}`;
     }
-
-    document.querySelectorAll(".decrease").forEach(btn => btn.addEventListener("click", () => {
-      const i = btn.getAttribute("data-index");
-      if (cart[i].quantity > 1) cart[i].quantity -= 1; else cart.splice(i, 1);
-      sessionStorage.setItem("cart", JSON.stringify(cart));
-      renderCart();
-    }));
-
-    document.querySelectorAll(".increase").forEach(btn => btn.addEventListener("click", () => {
-      const i = btn.getAttribute("data-index");
-      cart[i].quantity += 1;
-      sessionStorage.setItem("cart", JSON.stringify(cart));
-      renderCart();
-    }));
-
-    document.querySelectorAll(".remove").forEach(btn => btn.addEventListener("click", () => {
-      const i = btn.getAttribute("data-index");
-      cart.splice(i, 1);
-      sessionStorage.setItem("cart", JSON.stringify(cart));
-      renderCart();
-    }));
-  }
-
-  function clearCart() {
-    sessionStorage.removeItem("cart");
-    cart = [];
-    renderCart();
-  }
-
-  function checkout() {
-    if (cart.length === 0) {
-      alert("Your cart is empty!");
-      return;
-    }
-    const total = cart.reduce((sum, item) => sum + parseFloat(item.price.replace("$", "")) * item.quantity, 0);
-    sessionStorage.setItem("orderData", JSON.stringify(cart));
-    sessionStorage.setItem("totalAmount", total.toFixed(2));
-    window.location.href = "payment.html";
   }
 
   document.querySelectorAll(".filter-buttons button").forEach(btn => {
     btn.addEventListener("click", () => setCategory(btn.getAttribute("data-category")));
   });
 
-  document.getElementById("clearCartBtn").addEventListener("click", clearCart);
-  document.getElementById("checkoutBtn").addEventListener("click", checkout);
-  document.getElementById("checkoutBtnBottom").addEventListener("click", checkout);
-  document.getElementById("stickyCheckout").addEventListener("click", checkout);
+  document.getElementById("goToCartBtn").addEventListener("click", () => {
+    window.location.href = "cart.html";
+  });
 
   searchInput.addEventListener("input", renderMenu);
+
   window.onload = () => {
     fetchMenu();
     renderCart();
   };
 </script>
+
+<style>
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    right: 20px;
+    background-color: #323232;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: 'Baloo 2', cursive;
+    z-index: 9999;
+    font-weight: bold;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .toast.show {
+    display: block;
+    opacity: 1;
+  }
+</style>
 </body>
 </html>
